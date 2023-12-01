@@ -2,4 +2,4 @@
 
 ## 2023
 
-- [DAY 1](day1/text.txt)
+-   [DAY 1](day1/solution.ts)
