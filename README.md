@@ -9,3 +9,4 @@
 -   npm i
 -   npx tsc
 -   node _year_/_dayNumber_/solution.js
+    => npx tsc && node _year_/_dayNumber_/solution-1,js

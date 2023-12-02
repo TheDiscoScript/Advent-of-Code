@@ -8,7 +8,6 @@ const fs_1 = require("fs");
 const path_1 = __importDefault(require("path"));
 function readInputFile(folder, inputFilename) {
     try {
-        // Adjust the path to point to the 'day1' folder
         const filePath = path_1.default.join(__dirname, '..', folder, inputFilename);
         const data = (0, fs_1.readFileSync)(filePath, 'utf8');
         return data;
