@@ -24,8 +24,6 @@ const testString = `467..114..
 ...$.*....
 .664.598..`;
 
-const testString2 = `.................=....836......402.755............=.......*.......*....181.62...*.....%........................596......*............#591...
-...............764.....................................488.....880.209........416..................183...156..........917...................`;
 const getNumbersAndSymbolsPositions = (inputRow: string): [NumberPositions[], SymbolPositions[]] => {
 	const data: string[] = inputRow.split('');
 	const numberPositions: NumberPositions[] = [];
