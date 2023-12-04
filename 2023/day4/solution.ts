@@ -15,7 +15,7 @@ const testLine = `Card 3: 21  1  2 59 44 | 69 82 63 72 16 21 14  1`;
 
 //parse one line
 // split on :, then split on |, then split on space
-const returnLinePoints = (line: string) => {
+const returnLinePoints = (line: string, isPartTwo?: boolean) => {
 	const [card, numbers] = line.split(': ');
 	const [number1string, numbers2string] = numbers.split(' | ');
 	const cardNumber = Number(card.split(' ')[1]);
@@ -45,6 +45,7 @@ const returnLinePoints = (line: string) => {
 		if (value[0]) winningNumbersCounter++;
 	});
 
+	if (isPartTwo) return winningNumbersCounter;
 	return calculatePoints(winningNumbersCounter);
 };
 const calculatePoints = (numberOfWinningNumbers: number) => {
@@ -57,7 +58,6 @@ const calculatePoints = (numberOfWinningNumbers: number) => {
 	return points;
 };
 
-console.log(returnLinePoints(testLine));
 //////////////////
 const returnSumOfPointsAllRows = (input: string) => {
 	const rows = getRows(input);
@@ -72,3 +72,56 @@ const runInputData = () => {
 
 console.log('Test Input: ' + returnSumOfPointsAllRows(testString));
 console.log('Real Input: ' + runInputData());
+//////////////////
+//////////////////
+
+const weAreCountingCopiesOfCardNow = (input: { [key: string]: number }[]): number => {
+	const cardsMap: Map<number, { original: number; copy: number }> = new Map<number, { original: 0; copy: 0 }>();
+
+	//populate map, it is easier to work with it
+	for (let i = 1; i <= input.length; i++) {
+		cardsMap.set(i, { original: 1, copy: 0 });
+	}
+
+	for (let i = 0; i < input.length; i++) {
+		const cardKey = Object.keys(input[i]);
+		const cardValue = input[i][cardKey[0]];
+		const cardInMap = cardsMap.get(i + 1);
+
+		//I need to forLoop it twice - first time to increment original, second time to increment copy
+		for (let x = 0; x < cardInMap!.original + cardInMap!.copy; x++) {
+			for (let j = 1; j <= cardValue; j++) {
+				const thisIsbitRetardedButI = i + 1;
+				let cardInMapThatIsBeingIncremented = cardsMap.get(thisIsbitRetardedButI + j);
+				if (!cardInMapThatIsBeingIncremented) continue;
+				cardInMapThatIsBeingIncremented!.copy++;
+			}
+		}
+	}
+
+	let numOfScratchcardPoints = 0;
+	cardsMap.forEach((value: { original: number; copy: number }) => {
+		numOfScratchcardPoints += value.original + value.copy;
+	});
+	return numOfScratchcardPoints;
+};
+
+const returnSumOfPointsAllRowsPart2 = (input: string) => {
+	const isPartTwo = true;
+	const rows = getRows(input);
+	const arrOfPoints = rows.map((row, index) => {
+		const indexPlus1 = index + 1;
+		const points = returnLinePoints(row, isPartTwo);
+		return { [`${indexPlus1}`]: points };
+	});
+
+	const numberOfSctratchcards = weAreCountingCopiesOfCardNow(arrOfPoints);
+	return numberOfSctratchcards;
+};
+const runInputDataPart2 = () => {
+	const inputData = readInputFile('day4', 'input.txt');
+	if (!inputData) throw new Error('No input data');
+	return returnSumOfPointsAllRowsPart2(inputData);
+};
+console.log('Test Input Part Two: ' + returnSumOfPointsAllRowsPart2(testString));
+console.log('Real Input Part Two: ' + runInputDataPart2());
