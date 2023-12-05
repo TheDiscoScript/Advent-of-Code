@@ -92,7 +92,7 @@ humidity-to-location map:
 60 56 37
 56 93 4`;
 
-const LOG = true;
+const LOG = false;
 //const calculateCurrentMapValue = (alteredSeedValue: number, map: Omit<XtoYMap, 'seedCalculationMap'>) => {};
 const calculateRange = (destination: number, source: number, range: number): { destination: [number, number]; source: [number, number] } => {
 	const destinationArr: [number, number] = [destination, destination + range - 1];
@@ -120,13 +120,41 @@ const calculateSeedValue = (seed: number, currentProcessedMaps: XtoYMap[]): numb
 	return result!;
 };
 
-const createSeedToEverythingMap = (input: string) => {
+const seedRangesModificationForPartTwo = (input: string) => {
+	if (LOG) console.log('🚀 ~ file: solution.ts:124 ~ seedRangesModificationForPartTwo ~ input:', input);
+	const justNumberString = input.slice(7);
+	const numbers = justNumberString.split(' ').map(Number);
+
+	//pairs of numbers
+	const pairs: Array<[number, number]> = [];
+	for (let i = 0; i < numbers.length - 1; i += 2) {
+		pairs.push([numbers[i], numbers[i + 1]]);
+	}
+
+	const ranges: number[] = pairs
+		.map((pair) => {
+			const [start, length] = pair;
+			const end = start + length;
+			const range = [];
+			for (let i = start; i < end; i++) {
+				range.push(i);
+			}
+			return range;
+		})
+		.flat();
+	if (LOG) console.log('🚀 ~ file: solution.ts:146 ~ seedRangesModificationForPartTwo ~ ranges:', ranges);
+	return ranges;
+};
+
+const createSeedToEverythingMap = (input: string, isPartTwo?: boolean) => {
 	const rows = getRows(input);
 	if (LOG) console.log('🚀 ~ file: solution.ts:75 ~ createSeedToEverythingMap ~ rows:', rows);
-	const originalSeedValues = rows[0]
-		.split(' ')
-		.map(Number)
-		.filter((num) => !isNaN(num));
+	const originalSeedValues = isPartTwo
+		? seedRangesModificationForPartTwo(rows[0])
+		: rows[0]
+				.split(' ')
+				.map(Number)
+				.filter((num) => !isNaN(num));
 	if (LOG) console.log('🚀 ~ file: solution.ts:76 ~ createSeedToEverythingMap ~ seeds:', originalSeedValues);
 
 	const firstMapPosition = 2; //hack
@@ -183,8 +211,8 @@ const createSeedToEverythingMap = (input: string) => {
 
 		//
 	}
-	//console.log('🚀 ~ file: solution.ts:96 ~ createSeedToEverythingMap ~ theWholeProcessMap:', theWholeProcessMap);
-	if (LOG) console.dir(theWholeProcessMap, { depth: null });
+	//if (LOG)
+	console.dir(theWholeProcessMap, { depth: null });
 
 	//i want to return last map in theWholeProcessMap
 	return theWholeProcessMap.get(currentMapName as string)?.seedCalculationMap;
@@ -196,8 +224,8 @@ const calculateLowestLocationValue = (input: Map<UnalteredSeedValue, seedToCalcu
 	return lowestValue;
 };
 
-const runTestInputData = (input: string) => {
-	const locationMap = createSeedToEverythingMap(input);
+const runTestInputData = (input: string, isPartTwo?: boolean) => {
+	const locationMap = createSeedToEverythingMap(input, isPartTwo);
 	const lowestLocationValue = calculateLowestLocationValue(locationMap!);
 	return lowestLocationValue;
 };
@@ -207,5 +235,120 @@ const runInputData = () => {
 	return runTestInputData(inputData);
 };
 
-console.log('Test Input: ' + runTestInputData(testString));
-console.log('Real Input: ' + runInputData());
+//console.log('Test Input: ' + runTestInputData(testString));
+//console.log('Real Input: ' + runInputData());
+///////////////
+///////////////
+const runInputDataPartTwo = () => {
+	const inputData = readInputFile('day5', 'input.txt');
+	if (!inputData) throw new Error('No input data');
+	return runTestInputData(inputData, true);
+};
+
+//console.log('Test Input Part 2: ' + runTestInputData(testString, true));
+// console.log('Real Input Part 2: ' + runInputDataPartTwo());
+
+// ok, nwm, we are inversing this shit
+const correctAnswer = 35;
+const incorrectAnswer = 34;
+
+// function processNumberThroughMappings(inputNumber: number, mappings: string[]): number {
+// 	for (let mapping of mappings) {
+// 		if (mapping === '') continue; // Skip empty strings
+
+// 		const [destinationStartStr, sourceStartStr, rangeLengthStr] = mapping.split(' ');
+// 		const destinationStart = parseInt(destinationStartStr);
+// 		const sourceStart = parseInt(sourceStartStr);
+// 		const rangeLength = parseInt(rangeLengthStr);
+
+// 		if (final >= destinationStart + rangeLength && final <= sourceStart + rangeLength) {
+// 			// Calculate new input number
+// 			const helper = final - destinationStart;
+// 			final = final + helper;
+// 		}
+// 		continue;
+// 	}
+// 	return inputNumber; // Return original number if no mapping applies
+// }
+const inversingRunTestInputData = (answer: number, rows: string[], seedPairs: [number, number][]): boolean => {
+	let final = answer;
+	let lookingForEmptyString = false;
+
+	for (let row of rows) {
+		if (lookingForEmptyString) {
+			if (row === '') {
+				lookingForEmptyString = false;
+				continue;
+			}
+			continue;
+		}
+		if (row === '') continue;
+		const [destinationStartStr, sourceStartStr, rangeLengthStr] = row.split(' ');
+		const destinationStart = parseInt(destinationStartStr);
+		const sourceStart = parseInt(sourceStartStr);
+		const rangeLength = parseInt(rangeLengthStr);
+		const isFinalBetweenDestInterval = final >= destinationStart && final <= destinationStart + rangeLength - 1;
+
+		if (isFinalBetweenDestInterval) {
+			const helper = final - destinationStart;
+			final = sourceStart + helper;
+			lookingForEmptyString = true;
+			//now i want to skip in row loop to the next instance of row when it is empty string
+		}
+	}
+
+	for (let seedPair of seedPairs) {
+		if (final >= seedPair[0] && final <= seedPair[0] + seedPair[1]) {
+			console.log('---------------------------------------');
+			console.log('won - answer is ' + answer);
+			console.log('---------------------------------------');
+			return true;
+		}
+		continue;
+	}
+	return false;
+};
+
+const numberPairsInput: [number, number][] = [
+	[41218238, 421491713],
+	[1255413673, 350530906],
+	[944138913, 251104806],
+	[481818804, 233571979],
+	[2906248740, 266447632],
+	[3454130719, 50644329],
+	[1920342932, 127779721],
+	[2109326496, 538709762],
+	[3579244700, 267233350],
+	[4173137165, 60179884],
+];
+
+const burnMachine = (seedPairs: [number, number][]) => {
+	const inputData = readInputFile('day5', 'input.txt');
+	if (!inputData) throw new Error('No input data');
+	const rows = getRows(inputData)
+		.filter((line) => !line.includes('map'))
+		.reverse()
+		.slice(0, -1);
+
+	let burning = true;
+	let counter = 0;
+	const startTime = Date.now().valueOf();
+	while (burning) {
+		console.log('counter is ' + counter);
+		const doWeBreak = inversingRunTestInputData(counter, rows, seedPairs);
+		if (doWeBreak) {
+			console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+			console.log('we won! answer is ' + counter);
+			console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+			burning = false;
+			break;
+		}
+		counter++;
+	}
+	const endTime = Date.now().valueOf();
+
+	console.log('🚀 ~ file: solution.ts:336 ~ burnMachine ~ startTime:', startTime);
+	console.log('🚀 ~ file: solution.ts:351 ~ burnMachine ~ endTime:', endTime);
+};
+burnMachine(numberPairsInput);
+//went for 41 minutes, can easily be optimized
