@@ -1,30 +1,4 @@
-// Time:      7  15   30
-// Distance:  9  40  200
-
 import { readInputFile } from '../utilities/file-reader';
-
-//This document describes three races:
-//
-//The first race lasts 7 milliseconds. The record distance in this race is 9 millimeters.
-//The second race lasts 15 milliseconds. The record distance in this race is 40 millimeters.
-//The third race lasts 30 milliseconds. The record distance in this race is 200 millimeters`;
-
-//Your toy boat has a starting speed of zero millimeters per millisecond.
-//For each whole millisecond you spend at the beginning of the race holding down the button,
-// the boat's speed increases by one millimeter per millisecond.
-
-// So, because the first race lasts 7 milliseconds, you only have a few options:
-
-// Don't hold the button at all (that is, hold it for 0 milliseconds) at the start of the race. The boat won't move; it will have traveled 0 millimeters by the end of the race.
-// Hold the button for 1 millisecond at the start of the race. Then, the boat will travel at a speed of 1 millimeter per millisecond for 6 milliseconds, reaching a total distance traveled of 6 millimeters.
-// Hold the button for 2 milliseconds, giving the boat a speed of 2 millimeters per millisecond. It will then get 5 milliseconds to move, reaching a total distance of 10 millimeters.
-// Hold the button for 3 milliseconds. After its remaining 4 milliseconds of travel time, the boat will have gone 12 millimeters.
-// Hold the button for 4 milliseconds. After its remaining 3 milliseconds of travel time, the boat will have gone 12 millimeters.
-// Hold the button for 5 milliseconds, causing the boat to travel a total of 10 millimeters.
-// Hold the button for 6 milliseconds, causing the boat to travel a total of 6 millimeters.
-// Hold the button for 7 milliseconds. That's the entire duration of the race.
-//You never let go of the button. The boat can't move until you let go of the button.
-// Please make sure you let go of the button so the boat gets to move. 0 millimeters.
 
 // 0 *7 = 0
 // 1 *6 = 6 < 9
@@ -41,6 +15,17 @@ type Race = { raceTime: number; recordDistance: number; numberOfWaysToBeatRecord
 const testString = `Time:      7  15   30
 Distance:  9  40  200`;
 
+// (-x^2)+7x>9
+// (-x^2)+15x>40
+
+// (-x^2)+30x>200
+
+// -xNaDruhou + čas*x > rekord
+function calcul(time: number, record: number, num: number) {
+	return -(num * num) + time * num > record;
+}
+//console.log(calcul(7, 9));
+
 const calculateNumberOfWaysToBeatRecord = (raceTime: number, recordDistance: number): number => {
 	let numberOfWaysToBeatRecord = 0;
 
@@ -55,11 +40,40 @@ const calculateNumberOfWaysToBeatRecord = (raceTime: number, recordDistance: num
 	}
 	return numberOfWaysToBeatRecord;
 };
-function calculateNumOfMultipliedNumbersOfRecordsBreaking(races: Race[]) {
+const calculateNumOfMultipliedNumbersOfRecordsBreaking = (races: Race[]) => {
 	return races.map((e) => (e.numberOfWaysToBeatRecord !== 0 ? e.numberOfWaysToBeatRecord : 1)).reduce((a, b) => a * b);
-}
+};
+const optimizedCalculate = (race: Race) => {
+	let numberOfWaysToBeatRecord = 0;
+	for (let a = 0; a < race.raceTime; a++) {
+		let remainingTime = race.raceTime - a;
+		if (remainingTime === 0 || remainingTime === race.raceTime) continue;
+		const currentDistance = a * remainingTime;
+		if (currentDistance > race.recordDistance) {
+			const halfLength = race.raceTime / 2;
+			let position = a;
+			if (halfLength > position) {
+				const dif = (halfLength - position) * 2;
+				numberOfWaysToBeatRecord = dif;
+			}
+			if (halfLength < position) {
+				const dif = (position - halfLength) * 2;
+				numberOfWaysToBeatRecord = dif;
+			}
+			continue;
+		}
+	}
+	return numberOfWaysToBeatRecord + 1;
+};
+const optimizedCalculate2 = (race: Race) => {
+	let numberOfWaysToBeatRecord = 0;
+	for (let a = 0; a < race.raceTime; a++) {
+		if (calcul(race.raceTime, race.recordDistance, a)) numberOfWaysToBeatRecord++;
+	}
+	return numberOfWaysToBeatRecord;
+};
 // Function to parse the input string
-function parseInput(input: string): Race[] {
+function parseInput(input: string, optimized?: boolean): Race[] {
 	const lines = input.split('\n');
 	const times = lines[0].split(':').pop()!.trim().split(/\s+/).map(Number);
 	const distances = lines[1].split(':').pop()!.trim().split(/\s+/).map(Number);
@@ -68,20 +82,61 @@ function parseInput(input: string): Race[] {
 		return {
 			raceTime: time,
 			recordDistance: distances[index],
-			numberOfWaysToBeatRecord: calculateNumberOfWaysToBeatRecord(time, distances[index]),
+			numberOfWaysToBeatRecord: !optimized
+				? calculateNumberOfWaysToBeatRecord(time, distances[index])
+				: optimizedCalculate2({ raceTime: time, recordDistance: distances[index], numberOfWaysToBeatRecord: 0 }),
 		};
 	});
 }
 
-const runTestInputData = (input: string) => {
-	const parsedData = parseInput(input);
+const runTestInputData = (input: string, optimized?: boolean) => {
+	const parsedData = parseInput(input, optimized);
+	console.log('🚀 ~ file: solution.ts:75 ~ runTestInputData ~ parsedData:', parsedData);
 	return calculateNumOfMultipliedNumbersOfRecordsBreaking(parsedData);
 };
-const runInputData = () => {
+const runInputData = (optimized?: boolean) => {
 	const input = readInputFile('day6', 'input.txt');
 	if (!input) throw new Error('Input file not found');
-	const parsedData = parseInput(input);
+	const parsedData = parseInput(input, true);
 	return calculateNumOfMultipliedNumbersOfRecordsBreaking(parsedData);
 };
 console.log('Test Input: ' + runTestInputData(testString));
+console.time('runInputData');
 console.log('Real Input: ' + runInputData());
+console.timeEnd('runInputData');
+console.log('Test Input optimized: ' + runTestInputData(testString, true));
+console.time('runInputData optimized');
+console.log('Real Input optimized: ' + runInputData(true));
+console.timeEnd('runInputData optimized');
+
+// Function to parse the input string
+function parseInputPartTwo(input: string, unoptimized?: boolean): Race {
+	const lines = input.split('\n');
+	const time = Number(lines[0].split(':').pop()!.trim().replace(/\s+/g, ''));
+	console.log('🚀 ~ file: solution.ts:116 ~ parseInputPartTwo ~ times:', time);
+	const distance = Number(lines[1].split(':').pop()!.trim().replace(/\s+/g, ''));
+	console.log('🚀 ~ file: solution.ts:118 ~ parseInputPartTwo ~ distances:', distance);
+
+	return {
+		raceTime: time,
+		recordDistance: distance,
+		numberOfWaysToBeatRecord: unoptimized
+			? calculateNumberOfWaysToBeatRecord(time, distance)
+			: optimizedCalculate({ raceTime: time, recordDistance: distance, numberOfWaysToBeatRecord: 0 }),
+	};
+}
+const runInputData2 = (unoptimized?: boolean) => {
+	const input = readInputFile('day6', 'input.txt');
+	if (!input) throw new Error('Input file not found');
+	const parsedData = parseInputPartTwo(input, unoptimized);
+	console.log('🚀 ~ file: solution.ts:130 ~ runInputData2 ~ parsedData:', parsedData);
+
+	return parsedData.numberOfWaysToBeatRecord;
+};
+
+console.time('runInputData2 optimized');
+console.log('Real Input part two: ' + runInputData2());
+console.timeEnd('runInputData2 optimized');
+console.time('runInputData2 not optimized');
+console.log('Real Input part two not optimized: ' + runInputData2(true));
+console.timeEnd('runInputData2 not optimized');
