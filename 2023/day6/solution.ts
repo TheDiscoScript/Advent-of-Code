@@ -113,16 +113,14 @@ console.timeEnd('runInputData optimized');
 function parseInputPartTwo(input: string, unoptimized?: boolean): Race {
 	const lines = input.split('\n');
 	const time = Number(lines[0].split(':').pop()!.trim().replace(/\s+/g, ''));
-	console.log('🚀 ~ file: solution.ts:116 ~ parseInputPartTwo ~ times:', time);
 	const distance = Number(lines[1].split(':').pop()!.trim().replace(/\s+/g, ''));
-	console.log('🚀 ~ file: solution.ts:118 ~ parseInputPartTwo ~ distances:', distance);
 
 	return {
 		raceTime: time,
 		recordDistance: distance,
 		numberOfWaysToBeatRecord: unoptimized
 			? calculateNumberOfWaysToBeatRecord(time, distance)
-			: optimizedCalculate({ raceTime: time, recordDistance: distance, numberOfWaysToBeatRecord: 0 }),
+			: optimizedCalculate2({ raceTime: time, recordDistance: distance, numberOfWaysToBeatRecord: 0 }),
 	};
 }
 const runInputData2 = (unoptimized?: boolean) => {
