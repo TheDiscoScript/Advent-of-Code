@@ -1,189 +1,234 @@
-import { run } from 'node:test';
 import { getRows } from '../utilities/get-rows';
+import { readInputFile } from '../utilities/file-reader';
 
-interface CardsStrength {
-	1: 2;
-	2: 3;
-	3: 4;
-	4: 5;
-	5: 6;
-	6: 7;
-	7: 8;
-	8: 9;
-	10: 'T';
-	11: 'J';
-	12: 'Q';
-	13: 'K';
-	14: 'A';
+enum HandsStrength {
+	'five of a kind' = 6000,
+	'four of a kind' = 5000,
+	'full house' = 4000,
+	'three of a kind' = 3000,
+	'two pairs' = 2000,
+	'one pair' = 1000,
+	'high card' = 0,
 }
-interface ComboStrength {
-	1: 'high card';
-	2: 'one pair';
-	3: 'two pairs';
-	4: 'three of a kind';
-	5: 'full house';
-	6: 'four of a kind';
-	7: 'five of a kind';
-}
-type Hand = {
-	base: string;
+interface Hand {
+	hand: string;
 	bid: number;
-	type: ComboStrength[keyof ComboStrength];
-	positionInSet: number;
-	totalWinnings: number;
-};
+	strength: number;
+}
+
 const testString = `32T3K 765
 T55J5 684
 KK677 28
 KTJJT 220
-QQQJA 483
-123AK 1000
-2134K 1000
-K1234 1111`;
-const comboStrent: ComboStrength = {
-	1: 'high card',
-	2: 'one pair',
-	3: 'two pairs',
-	4: 'three of a kind',
-	5: 'full house',
-	6: 'four of a kind',
-	7: 'five of a kind',
-};
-const cardsStrength: CardsStrength = {
-	1: 2,
-	2: 3,
-	3: 4,
-	4: 5,
-	5: 6,
-	6: 7,
-	7: 8,
-	8: 9,
-	10: 'T',
-	11: 'J',
-	12: 'Q',
-	13: 'K',
-	14: 'A',
-};
-const LOG = false;
+QQQJA 483`;
 
-const determineCombo = (hand: string): ComboStrength[keyof ComboStrength] => {
+const LOG = false;
+const CARDS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+
+function getHandAndBid(row: string): [string, number] {
+	const [hand, bid] = row.split(' ');
+	return [hand, Number(bid)];
+}
+function handStrenght(hand: string): number {
 	const cardCounts = new Map<string, number>();
-	if (LOG) console.log('🚀 ~ file: solution.ts:65 ~ determineCombo ~ cardCounts BEFORE:', cardCounts);
 	for (const card of hand) {
 		if (card !== ' ') {
 			cardCounts.set(card, (cardCounts.get(card) || 0) + 1);
 		}
 	}
-
 	if (LOG) console.log('🚀 ~ file: solution.ts:65 ~ determineCombo ~ cardCounts AFTER:', cardCounts);
 	const counts = Array.from(cardCounts.values());
-
 	if (LOG) console.log('🚀 ~ file: solution.ts:73 ~ determineCombo ~ counts:', counts);
 	counts.sort((a, b) => b - a); // Sort in descending order
 
 	switch (counts.length) {
 		case 1:
-			return 'five of a kind';
+			return HandsStrength['five of a kind'];
 		case 2:
-			return counts[0] === 4 ? 'four of a kind' : 'full house';
+			return counts[0] === 4 ? HandsStrength['four of a kind'] : HandsStrength['full house'];
 		case 3:
-			return counts[0] === 3 ? 'three of a kind' : 'two pairs';
+			return counts[0] === 3 ? HandsStrength['three of a kind'] : HandsStrength['two pairs'];
 		case 4:
-			return 'one pair';
+			return HandsStrength['one pair'];
 		default:
-			return 'high card';
+			return HandsStrength['high card'];
 	}
-};
-const createMapOfCombosFromCards = (input: string): Map<string, Hand[]> => {
-	const combosMap = new Map<ComboStrength[keyof ComboStrength], Hand[]>();
+}
+
+function runTestInput(input: string) {
 	const rows = getRows(input);
-	if (LOG) console.log('🚀 ~ file: solution.ts:42 ~ createMapOfCards ~ rows:', rows);
-	for (let i = 0; i < rows.length; i++) {
-		const [hand, bid] = rows[i].split(' ');
-		const combo = determineCombo(hand);
-		if (!combosMap.has(combo)) combosMap.set(combo, [{ base: hand, bid: Number(bid), type: combo, positionInSet: 0, totalWinnings: 0 }]);
-		else combosMap.get(combo)?.push({ base: hand, bid: Number(bid), type: combo, positionInSet: 0, totalWinnings: 0 });
+	if (LOG) console.log('🚀 ~ file: solution.ts:59 ~ runTestInput ~ rows:', rows);
+	const hands: Hand[] = rows.map((e) => {
+		const [hand, bid] = getHandAndBid(e);
+		return { hand, bid, strength: handStrenght(hand) };
+	});
+	if (LOG) console.log('🚀 ~ file: solution.ts:61 ~ runTestInput ~ hands:', hands);
+	hands.sort(compareHands);
+	if (LOG) console.log('🚀 ~ file: solution.ts:70 ~ runTestInput ~ hands:', hands);
+
+	const totalWinning = hands.reduce((acc, curr, index) => acc + curr.bid * (index + 1), 0);
+	if (LOG) console.log('🚀 ~ file: solution.ts:71 ~ runTestInput ~ totalWinning:', totalWinning);
+	return totalWinning;
+
+	function compareHands(hand1: Hand, hand2: Hand) {
+		if (hand1.strength > hand2.strength) return +1; // hand1 is stronger
+		else if (hand1.strength < hand2.strength) return -1; // hand2 is stronger
+		else {
+			// same value, so we are comparing same TYPES of hands
+			for (let i = 0; i < hand1.hand.length; i++) {
+				const card1 = hand1.hand[i];
+				const card2 = hand2.hand[i];
+				// return CARDS.indexOf(card1) - CARDS.indexOf(card2);
+				if (CARDS.indexOf(card1) > CARDS.indexOf(card2)) {
+					return -1;
+				} else if (CARDS.indexOf(card1) < CARDS.indexOf(card2)) {
+					return +1;
+				}
+			}
+			return 0;
+		}
 	}
-
-	return combosMap;
-};
-const calculatePositions = (combosMap: Map<string, Hand[]>): Map<string, Hand[]> | void => {
-	let start = 1;
-	const highCards = combosMap.get('high card');
-	if (highCards && highCards?.length > 0) {
-		if (highCards.length === 1) {
-			highCards[0].positionInSet = 1;
-			highCards[0].totalWinnings = highCards[0].bid * highCards[0].positionInSet;
-		}
-		if (highCards.length > 2) {
-			highCards.sort(compareHands).reverse();
-		}
-
-		start += highCards?.length;
-	}
-	console.log('🚀 ~ file: solution.ts:112 ~ calculatePositions ~ highCards:', highCards);
-
-	const onePairs = combosMap.get('one pair');
-	if (onePairs && onePairs?.length > 0) {
-		if (onePairs.length === 1) {
-			onePairs[0].positionInSet = start;
-			onePairs[0].totalWinnings = onePairs[0].bid * onePairs[0].positionInSet;
-		}
-		if (onePairs.length >= 2) {
-			onePairs.sort(compareHands).reverse();
-		}
-		start += onePairs?.length;
-	}
-
-	const twoPairs = combosMap.get('two pairs');
-	if (twoPairs && twoPairs?.length > 0) {
-		if (twoPairs.length === 1) {
-			twoPairs[0].positionInSet = start;
-			twoPairs[0].totalWinnings = twoPairs[0].bid * twoPairs[0].positionInSet;
-		}
-		console.log('🚀 ~ file: solution.ts:138 ~ calculatePositions ~ twoPairs:', twoPairs.length);
-		if (twoPairs.length >= 2) {
-			twoPairs.sort(compareHands).reverse();
-		}
-		start += twoPairs?.length;
-	}
-
-	console.log('🚀 ~ file: solution.ts:138 ~ calculatePositions ~ twoPairs:', twoPairs);
-
-	// const threeOfAKind = combosMap.get('three of a kind');
-	// const threeOfAKindStartPosition = twoPairsStartPosition + (threeOfAKind?.length ?? 0);
-	// const fullHouse = combosMap.get('full house');
-	// const fullHouseStartPosition = threeOfAKindStartPosition + (fullHouse?.length ?? 0);
-	// const fourOfAKind = combosMap.get('four of a kind');
-	// const fourOfAKindStartPosition = fullHouseStartPosition + (fourOfAKind?.length ?? 0);
-	// const fiveOfAKind = combosMap.get('five of a kind');
-	// const fiveOfAKindStartPosition = fourOfAKindStartPosition + (fiveOfAKind?.length ?? 0);
-
-	return;
-};
-const runTestInput = (input: string) => {
-	const combosMap = createMapOfCombosFromCards(input);
-	if (LOG) console.log('🚀 ~ file: solution.ts:42 ~ runTestInput ~ combosMap:', combosMap);
-	calculatePositions(combosMap);
-};
-runTestInput(testString);
-
-// Function to get the strength of a card
-function getCardStrength(card: string): number {
-	const cardValue = card === 'T' ? 10 : card === 'J' ? 11 : card === 'Q' ? 12 : card === 'K' ? 13 : card === 'A' ? 14 : parseInt(card);
-	//@ts-ignore
-	return cardsStrength[cardValue] || 0;
+}
+function runInputData() {
+	const inputData = readInputFile('day7', 'input.txt');
+	if (!inputData) throw new Error('No input data');
+	return runTestInput(inputData);
 }
 
-// Comparison function for two hands
-function compareHands(hand1: Hand, hand2: Hand): number {
-	const hand1Values = hand1.base.split('').map(getCardStrength);
-	const hand2Values = hand2.base.split('').map(getCardStrength);
-
-	for (let i = 0; i < Math.min(hand1Values.length, hand2Values.length); i++) {
-		if (hand1Values[i] !== hand2Values[i]) {
-			return hand2Values[i] - hand1Values[i];
+console.log('Test Input: ' + runTestInput(testString));
+console.log('Real Input: ' + runInputData()); //252164303
+////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////
+const CARDS_PART_TWO = ['A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', 'J'];
+function handStrenghtPartTwo(hand: string): number {
+	const cardCounts = new Map<string, number>();
+	for (const card of hand) {
+		if (card == 'J') continue;
+		if (card !== ' ') {
+			cardCounts.set(card, (cardCounts.get(card) || 0) + 1);
 		}
 	}
-	return 0;
+	const counts = Array.from(cardCounts.values());
+	let cardCountSize = 0;
+	cardCounts.forEach((value, key) => {
+		cardCountSize += value;
+	});
+
+	if (LOG) console.log('🚀 ~ file: solution.ts:65 ~ determineCombo ~ cardCounts AFTER:', cardCounts);
+	counts.sort((a, b) => b - a); // Sort in descending order
+	if (LOG) console.log('🚀 ~ file: solution.ts:73 ~ determineCombo ~ counts:', counts);
+
+	if (cardCountSize == 5) {
+		//unchanged - no joker
+		switch (counts.length) {
+			case 1:
+				return HandsStrength['five of a kind'];
+			case 2:
+				return counts[0] === 4 ? HandsStrength['four of a kind'] : HandsStrength['full house'];
+			case 3:
+				return counts[0] === 3 ? HandsStrength['three of a kind'] : HandsStrength['two pairs'];
+			case 4:
+				return HandsStrength['one pair'];
+			default:
+				return HandsStrength['high card'];
+		}
+	} else {
+		//we have jokers
+		if (cardCountSize == 0 || cardCountSize == 1) {
+			return HandsStrength['five of a kind'];
+		} else if (cardCountSize == 2) {
+			//we have 2 cards the same
+			if (counts[0] == 2) {
+				return HandsStrength['five of a kind'];
+			} else if (counts[0] == 1) {
+				return HandsStrength['four of a kind'];
+			}
+		} else if (cardCountSize == 3) {
+			//JJ
+			//999 --> five of a kind
+			//998 --> four of a kind - not full house- four is better
+			//987 --> three of a kind
+			//we have 3 cards the same
+			if (counts[0] == 3) {
+				return HandsStrength['five of a kind'];
+			} else if (counts[0] == 2) {
+				return HandsStrength['four of a kind'];
+			} else if (counts[0] == 1) {
+				return HandsStrength['three of a kind'];
+			}
+		} else if (cardCountSize == 4) {
+			//J
+			// 9999 --> five of a kind
+			// 9998 --> four of a kind - not full house- four is better
+			// 9988 --> full house
+			// 9987 --> three of a kind  - not two pairs
+			// 9865 --> one pair
+
+			//we have 4 cards the same
+			if (counts[0] == 4) {
+				return HandsStrength['five of a kind'];
+			} else if (counts[0] == 3) {
+				return HandsStrength['four of a kind'];
+			} else if (counts[0] == 2) {
+				//one J, two cards same and two another same
+				if (counts[1] == 2) {
+					return HandsStrength['full house'];
+				}
+				//one J, two cards same and two different
+				else if (counts[1] == 1) {
+					return HandsStrength['three of a kind'];
+				}
+			} else if (counts[0] == 1) {
+				return HandsStrength['one pair'];
+			}
+		}
+
+		return HandsStrength['high card'];
+	}
 }
+
+function runTestInputPartTwo(input: string) {
+	const rows = getRows(input);
+	if (LOG) console.log('🚀 ~ file: solution.ts:108 ~ runTestInputPartTwo ~ rows:', rows);
+	const hands: Hand[] = rows.map((e) => {
+		const [hand, bid] = getHandAndBid(e);
+		return { hand, bid, strength: handStrenghtPartTwo(hand) };
+	});
+	if (LOG) console.log('🚀 ~ file: solution.ts:113 ~ consthands:Hand[]=rows.map ~ hands:', hands);
+
+	hands.sort(compareHands);
+	if (LOG) console.log('🚀 ~ file: solution.ts:118 ~ runTestInputPartTwo ~ hands - SORT:', hands);
+
+	if (LOG) console.log(hands);
+	const totalWinning = hands.reduce((acc, curr, index) => acc + curr.bid * (index + 1), 0);
+	if (LOG) console.log('🚀 ~ file: solution.ts:118 ~ runTestInputPartTwo ~ totalWinning:', totalWinning);
+	return totalWinning;
+
+	function compareHands(hand1: Hand, hand2: Hand) {
+		if (hand1.strength > hand2.strength) return +1; // hand1 is stronger
+		else if (hand1.strength < hand2.strength) return -1; // hand2 is stronger
+		else {
+			// same value, so we are comparing same TYPES of hands
+			for (let i = 0; i < hand1.hand.length; i++) {
+				const card1 = hand1.hand[i];
+				const card2 = hand2.hand[i];
+				// return CARDS.indexOf(card1) - CARDS.indexOf(card2);
+				if (CARDS_PART_TWO.indexOf(card1) > CARDS_PART_TWO.indexOf(card2)) {
+					return -1;
+				} else if (CARDS_PART_TWO.indexOf(card1) < CARDS_PART_TWO.indexOf(card2)) {
+					return +1;
+				}
+			}
+			return 0;
+		}
+	}
+}
+
+function runInputDataPartTwo() {
+	const inputData = readInputFile('day7', 'input.txt');
+	if (!inputData) throw new Error('No input data');
+	return runTestInputPartTwo(inputData);
+}
+
+console.log('Test Input Part Two: ' + runTestInputPartTwo(testString));
+console.log('Real Input Part Two: ' + runInputDataPartTwo());
