@@ -243,6 +243,8 @@ the loop - squeezing between pipes is also allowed!
 and I am not redoing this, cause idk how to do it
 
  */
+
+//I need to learn about Polygons and points in polygons (points of crossing)
 const runPartTwo = (input: string) => {
 	const result = run(input, true);
 	if (typeof result === 'number') {
