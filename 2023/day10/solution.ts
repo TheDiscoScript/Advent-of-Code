@@ -51,11 +51,7 @@ function createMazeMap(input: string): { startCoordinates: { row: number; index:
 	}
 	return { map, startCoordinates };
 }
-function findIndexLimitOfMaze(map: Map<number, string[]>) {
-	const height = map.size - 1;
-	const width = map.get(0)!.length - 1;
-	return { height, width };
-}
+
 type Surroundings = { north: string | undefined; south: string | undefined; east: string | undefined; west: string | undefined };
 type Direction = 'north' | 'south' | 'east' | 'west';
 function checkEligibilityOfPath(currentLetter: string, surroundings: Surroundings): Direction {
@@ -117,10 +113,7 @@ function getBannedDirection(direction: Direction): Direction {
 	throw new Error(`Invalid direction: ${direction}`);
 }
 function getExploredPath(startCoordinates: { row: number; index: number }, map: Map<number, string[]>) {
-	const { height, width } = findIndexLimitOfMaze(map); //start at 0
 	const exploredPath = [`${startCoordinates.row}-${startCoordinates.index}`];
-	if (LOG) console.log('🚀 ~ file: solution.ts:54 ~ run ~ height:', height);
-	if (LOG) console.log('🚀 ~ file: solution.ts:54 ~ run ~ width:', width);
 
 	let currentLetter = map.get(startCoordinates.row)![startCoordinates.index];
 	let currentCoordinates = startCoordinates;
@@ -175,3 +168,26 @@ console.log('Test Input 0_Complex: ' + run(testString_0_Complex));
 console.log('Test Input 1: ' + run(testString_1_Simple));
 console.log('Test Input 1_Complex: ' + run(testString_1_Complex));
 console.log('Real Input: ' + runRealInput());
+
+////////////////////////////////////////////////
+////////////////////////////////////////////////
+
+const testStringPartTwo_0 = `...........
+.S-------7.
+.|F-----7|.
+.||.....||.
+.||.....||.
+.|L-7.F-J|.
+.|..|.|..|.
+.L--J.L--J.
+...........`;
+const testStringPartTwo_1 = `.F----7F7F7F7F-7....
+.|F--7||||||||FJ....
+.||.FJ||||||||L7....
+FJL7L7LJLJ||LJ.L-7..
+L--J.L7...LJS7F-7L7.
+....F-J..F7FJ|L7L7L7
+....L7.F7||L7|.L7L7|
+.....|FJLJ|FJ|F7|.LJ
+....FJL-7.||.||||...
+....L---J.LJ.LJLJ...`;
