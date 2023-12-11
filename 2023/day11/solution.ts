@@ -20,18 +20,7 @@ const testString_0 = `...#......
 ..........
 .......#..
 #...#.....`;
-const testString_0_expanded = `....#........
-.........#...
-#............
-.............
-.............
-........#....
-.#...........
-............#
-.............
-.............
-.........#...
-#....#.......`;
+
 /**
 In these 9 galaxies, there are 36 pairs.
  Only count each pair once;
@@ -41,7 +30,7 @@ In these 9 galaxies, there are 36 pairs.
    move up, down, left, or right exactly one . or # at a time. 
  */
 
-const LOG = true;
+const LOG = false;
 
 function createGalaxy(input: string[]): string[][] {
 	const map: string[][] = [];
@@ -51,11 +40,19 @@ function createGalaxy(input: string[]): string[][] {
 	});
 	return map;
 }
-function expandGalaxies(galaxy: string[][]): string[][] {
+function expandGalaxies(
+	galaxy: string[][],
+	spaceBetween?: number,
+): { expandedGalaxy: string[][]; rememberHorizontal?: number[]; rememberVertical?: number[] } {
 	//Horizontal
+	const rememberHorizontal: number[] = [];
+	const rememberVertical: number[] = [];
 	for (let i = 0; i < galaxy.length; i++) {
 		if (galaxy[i].every((el) => el === '.')) {
+			if (spaceBetween) rememberVertical.push(i);
+
 			galaxy.splice(i, 0, galaxy[i]);
+
 			i++;
 		}
 
@@ -70,6 +67,8 @@ function expandGalaxies(galaxy: string[][]): string[][] {
 				}
 				//check column
 				if (column.every((el) => el === '.')) {
+					if (spaceBetween) rememberHorizontal.push(j);
+
 					for (let k = 0; k < galaxy.length; k++) {
 						galaxy[k].splice(j, 0, '.');
 					}
@@ -80,14 +79,14 @@ function expandGalaxies(galaxy: string[][]): string[][] {
 		}
 	}
 
-	return galaxy;
+	return { expandedGalaxy: galaxy, rememberHorizontal, rememberVertical };
 }
 
 type GalaxyHighway = {
 	origin: { row: number; index: number };
 };
 
-function findGalaxies(galaxy: string[][]): Map<number, GalaxyHighway> {
+function findGalaxies(galaxy: string[][], spaceBetween?: number, verticalPush?: number[], horizontalPush?: number[]): Map<number, GalaxyHighway> {
 	const galaxyHighways = new Map<number, GalaxyHighway>();
 	let galaxyCount = 0;
 	for (let i = 0; i < galaxy.length; i++) {
@@ -97,8 +96,8 @@ function findGalaxies(galaxy: string[][]): Map<number, GalaxyHighway> {
 			if (el === '#') {
 				const galaxyHighway: GalaxyHighway = {
 					origin: {
-						row: i,
-						index: j,
+						row: verticalPush && verticalPush?.length > 0 ? calculateVertical(i) : i,
+						index: horizontalPush && horizontalPush.length > 0 ? calculateHorizontal(j) : j,
 					},
 				};
 				galaxyCount++;
@@ -108,6 +107,24 @@ function findGalaxies(galaxy: string[][]): Map<number, GalaxyHighway> {
 	}
 
 	return galaxyHighways;
+	function calculateVertical(rowValue: number): number {
+		let sum = rowValue;
+		for (let i = 0; i < verticalPush!.length; i++) {
+			if (verticalPush![i] < rowValue) {
+				sum += spaceBetween! - 2;
+			}
+		}
+		return sum;
+	}
+	function calculateHorizontal(indexValue: number): number {
+		let sum = indexValue;
+		for (let i = 0; i < horizontalPush!.length; i++) {
+			if (horizontalPush![i] < indexValue) {
+				sum += spaceBetween! - 2; // -2 because we added a new column ... FOR FUCK SAKE
+			}
+		}
+		return sum;
+	}
 }
 function createGalaxyHighwayMap(galaxy: Map<number, GalaxyHighway>): Map<string, { steps: number }> {
 	const galaxyHighwayMap = new Map<string, { steps: number }>();
@@ -140,7 +157,7 @@ const run = (input: string): number => {
 	if (LOG) console.log('🚀s ~ file: solution.ts:57 ~ run ~ input:', `\n${input}`);
 	const rows = getRows(input);
 	const galaxy = createGalaxy(rows);
-	const expandedGalaxy = expandGalaxies(galaxy);
+	const { expandedGalaxy } = expandGalaxies(galaxy);
 	//	console.log('🚀 ~ file: solution.ts:72 ~ run ~ expandedGalaxy:', expandedGalaxy);
 	if (LOG) console.log('🚀 ~ file: solution.ts:72 ~ run ~ expandedGalaxy:', `\n${arrayOfArraysToString(expandedGalaxy)}`);
 
@@ -164,15 +181,46 @@ const runRealInput = (): number => {
 	return run(input);
 };
 console.log('Test Input: ' + run(testString_0));
-console.log('Real Input: ' + runRealInput());
+//console.log('Real Input: ' + runRealInput());
 
-// 1
-// 1-2, 1-3, 1-4, 1-5, 1-6, 1-7, 1-8, 1-9
-// 2-3, 2-4, 2-5, 2-6, 2-7, 2-8, 2-9
-// 3-4, 3-5, 3-6, 3-7, 3-8, 3-9
-// 4-5, 4-6, 4-7, 4-8, 4-9
-// 5-6, 5-7, 5-8, 5-9
-// 6-7, 6-8, 6-9
-// 7-8, 7-9
-// 8-9
-// 9
+//////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
+
+const runPartTwo = (input: string, spaceBetween: number): number => {
+	if (LOG) console.log('🚀s ~ file: solution.ts:57 ~ run ~ input:', `\n${input}`);
+	const rows = getRows(input);
+	if (LOG) console.log('Rows created');
+	const galaxy = createGalaxy(rows);
+	if (LOG) console.log('Galaxy created');
+	const { expandedGalaxy, rememberHorizontal, rememberVertical } = expandGalaxies(galaxy, spaceBetween);
+	if (LOG) console.log('🚀 ~ file: solution.ts:189 ~ runPartTwo ~ rememberVertical:', rememberVertical);
+	if (LOG) console.log('🚀 ~ file: solution.ts:189 ~ runPartTwo ~ rememberHorizontal:', rememberHorizontal);
+	if (LOG) console.log('Galaxy expanded');
+	//	console.log('🚀 ~ file: solution.ts:72 ~ run ~ expandedGalaxy:', expandedGalaxy);
+	if (LOG) console.log('🚀 ~ file: solution.ts:72 ~ run ~ expandedGalaxy:', `\n${arrayOfArraysToString(expandedGalaxy)}`);
+
+	const foundGalaxies = findGalaxies(expandedGalaxy, spaceBetween, rememberVertical, rememberHorizontal);
+	if (LOG) console.log('Galaxies found');
+	if (LOG) console.log('🚀 ~ file: solution.ts:166 ~ run ~ foundGalaxies:', foundGalaxies);
+	const galaxyHighwayMap = createGalaxyHighwayMap(foundGalaxies);
+	if (LOG) console.log('Galaxy Highway Map created');
+	if (LOG) console.log('🚀 ~ file: solution.ts:139 ~ run ~ galaxyHighwayMap:', galaxyHighwayMap);
+
+	if (LOG) console.log('Counting');
+	return sumOfAllPairsSteps(galaxyHighwayMap);
+	function sumOfAllPairsSteps(galaxyHighwayMap: Map<string, { steps: number }>): number {
+		let sum = 0;
+		for (const [key, value] of galaxyHighwayMap) {
+			sum += value.steps;
+		}
+		return sum;
+	}
+};
+
+const runRealInputPartTwo = (): number => {
+	const input = readInputFile('day11', 'input.txt');
+	if (!input) throw new Error('Input file not found.');
+	return runPartTwo(input, 1000000);
+};
+console.log('Test Input Part Two: ' + runPartTwo(testString_0, 100));
+console.log('Real Input Part Two: ' + runRealInputPartTwo());
