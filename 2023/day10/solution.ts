@@ -1,5 +1,6 @@
 import { readInputFile } from '../utilities/file-reader';
 import { getRows } from '../utilities/get-rows';
+import { mapToString } from '../utilities/map-to-string';
 
 /**
  | is a vertical pipe connecting north and south.
@@ -143,13 +144,13 @@ function getExploredPath(startCoordinates: { row: number; index: number }, map: 
 	return exploredPath;
 }
 
-const run = (input: string) => {
+const run = (input: string, partTwo?: boolean) => {
 	const { startCoordinates, map } = createMazeMap(input);
+	const limits = getMazeIndexLimit(map);
 	if (LOG) console.log('🚀 ~ file: solution.ts:54 ~ run ~ map:', map);
 	if (LOG) console.log('🚀 ~ file: solution.ts:54 ~ run ~ startCoordinates:', startCoordinates);
 	const exploredPath = getExploredPath(startCoordinates, map);
-	console.log('🚀 ~ file: solution.ts:129 ~ run ~ finalExploredPath:', exploredPath);
-	return getStepsToFarthestPoint(exploredPath.length);
+	return partTwo ? { exploredPath, limits } : getStepsToFarthestPoint(exploredPath.length);
 
 	function getStepsToFarthestPoint(exploredPathLength: number) {
 		//start and finish is the same
@@ -157,20 +158,26 @@ const run = (input: string) => {
 		const stepsToFarthestPoint = pathWithoutFinish / 2;
 		return stepsToFarthestPoint;
 	}
+	function getMazeIndexLimit(map: Map<number, string[]>) {
+		const height = map.size - 1;
+		const width = map.get(0)!.length - 1;
+		return { height, width };
+	}
 };
 const runRealInput = () => {
 	const input = readInputFile('day10', 'input.txt');
 	if (!input) throw new Error('No input data');
 	return run(input);
 };
-console.log('Test Input 0: ' + run(testString_0_Simple));
-console.log('Test Input 0_Complex: ' + run(testString_0_Complex));
-console.log('Test Input 1: ' + run(testString_1_Simple));
-console.log('Test Input 1_Complex: ' + run(testString_1_Complex));
-console.log('Real Input: ' + runRealInput());
+//console.log('Test Input 0: ' + run(testString_0_Simple));
+//console.log('Test Input 0_Complex: ' + run(testString_0_Complex));
+//console.log('Test Input 1: ' + run(testString_1_Simple));
+//console.log('Test Input 1_Complex: ' + run(testString_1_Complex));
+//console.log('Real Input: ' + runRealInput());
 
 ////////////////////////////////////////////////
 ////////////////////////////////////////////////
+const LOG2 = true;
 
 const testStringPartTwo_0 = `...........
 .S-------7.
@@ -191,3 +198,170 @@ L--J.L7...LJS7F-7L7.
 .....|FJLJ|FJ|F7|.LJ
 ....FJL-7.||.||||...
 ....L---J.LJ.LJLJ...`;
+function getWalls(exploredPath: string[]) {
+	const walls = new Map<number, number[]>();
+	for (let i = 0; i < exploredPath.length; i++) {
+		const [row, index] = exploredPath[i].split('-').map((x) => parseInt(x));
+		const rowArray = walls.get(row) ?? undefined;
+		if (rowArray) rowArray.push(index);
+		else walls.set(row, [index]);
+	}
+	return walls;
+}
+type PointDetails = { index: number; isWall: boolean; isBorder: boolean; isEnclosed?: 'unknown' | 'yes' | 'no' };
+
+/**
+
+whole part 2 is incorrect because of this
+
+In fact, there doesn't even need to be a full tile 
+path to the outside for tiles to count as outside 
+the loop - squeezing between pipes is also allowed!
+ Here, I is still within the loop and O is still outside the loop:
+...........
+.S-------7.
+.|F-----7|.
+.||OOOOO||.
+.||OOOOO||.
+.|L-7OF-J|.
+.|II|O|II|.
+.L--JOL--J.
+.....O.....
+
+===
+
+..........
+.S------7.
+.|F----7|.
+.||OOOO||.
+.||OOOO||.
+.|L-7F-J|.
+.|II||II|.
+.L--JL--J.
+..........
+
+and I am not redoing this, cause idk how to do it
+
+ */
+const runPartTwo = (input: string) => {
+	const result = run(input, true);
+	if (typeof result === 'number') {
+		console.log('Invalid result');
+		return;
+	}
+	const { exploredPath, limits } = result;
+	if (LOG) console.log('🚀 ~ file: solution.ts:206 ~ runPartTwo ~ limits:', limits);
+	if (LOG) console.log('🚀 ~ file: solution.ts:198 ~ runPartTwo ~ exploredPath:', exploredPath);
+
+	const walls = getWalls(exploredPath);
+	if (LOG) console.log('🚀 ~ file: solution.ts:235 ~ runPartTwo ~ walls:', walls);
+	let mazeMap = new Map<number, string[]>();
+	const mazeDetails = new Map<number, PointDetails[]>();
+
+	for (let i = 0; i <= limits.height; i++) {
+		const row = [];
+		const rowDetails = [];
+		for (let j = 0; j <= limits.width; j++) {
+			const isBorder = i === 0 || i === limits.height || j === 0 || j === limits.width;
+			if (walls.get(i)?.includes(j)) {
+				row.push('#');
+				rowDetails.push({
+					index: j,
+					isWall: true,
+					isBorder: isBorder,
+					isEnclosed: 'no',
+				});
+			} else {
+				row.push('.');
+				rowDetails.push({
+					index: j,
+					isWall: false,
+					isBorder: isBorder,
+					isEnclosed: isBorder ? 'no' : 'unknown',
+				});
+			}
+		}
+		mazeMap.set(i, row);
+		mazeDetails.set(i, rowDetails as PointDetails[]);
+	}
+
+	if (LOG2) {
+		const print = mapToString(mazeMap);
+		//	console.log('🚀 ~ file: solution.ts:226 ~ runPartTwo ~ mazeDetails:', mazeDetails);
+		console.log('🚀 ~ file: solution.ts:232 ~ runPartTwo ~ print: \n' + print);
+	}
+
+	for (let x = 0; x < limits.height; x++) {
+		for (let i = 0; i < mazeMap.size; i++) {
+			let row = mazeMap.get(i)!;
+			let rowDetails = mazeDetails.get(i)!;
+
+			for (let y = 0; y < row.length; y++) {
+				if (row[y] === '.') {
+					if (rowDetails[y].isBorder) {
+						row[y] = '0';
+						rowDetails[y].isEnclosed = 'no';
+						continue;
+					}
+
+					//check if enclosed from all sides
+					//top
+					const top = mazeMap.get(i - 1)!;
+					const isTop = top ? top[y] === '#' && top[y - 1] === '#' && top[y + 1] === '#' : true;
+					const isTopBorder = top ? top[y] === '0' || top[y - 1] === '0' || top[y + 1] === '0' : true;
+					//sides
+					const isSides = row[y - 1] && row[y - 1] === '#' && row[y + 1] && row[y + 1] === '#';
+					const isSidesBorder = (row[y - 1] && row[y - 1] === '0') || (row[y + 1] && row[y + 1] === '0');
+					//botom
+					const bottom = mazeMap.get(i + 1)!;
+					const isBottom = bottom ? bottom[y] === '#' && bottom[y - 1] === '#' && bottom[y + 1] === '#' : true;
+					const isBottomBorder = bottom ? bottom[y] === '0' || bottom[y - 1] === '0' || bottom[y + 1] === '0' : true;
+
+					if (isTopBorder || isSidesBorder || isBottomBorder || bottom[y] === '0') {
+						rowDetails[y].isEnclosed = 'no';
+						row[y] = '0';
+						continue;
+					} else if (rowDetails[y]?.isEnclosed === 'unknown' && rowDetails[y]?.isBorder === false && rowDetails[y]?.isWall === false) {
+						if (isTop && isSides && isBottom) {
+							row[y] = '1';
+							rowDetails[y].isEnclosed = 'yes';
+						}
+						if (isBottomBorder || isSidesBorder || isTopBorder) {
+							row[y] = '0';
+							rowDetails[y].isEnclosed = 'no';
+							continue;
+						}
+						rowDetails[y].isEnclosed = 'unknown';
+						continue;
+					}
+				}
+				if (row[y] === '#') continue;
+			}
+		}
+	}
+
+	if (LOG2) {
+		const print = mapToString(mazeMap);
+		console.log('FIRST PARSE START------------------------------------------------------------');
+		//console.log('🚀 ~ file: solution.ts:226 ~ runPartTwo ~ mazeDetails:', mazeDetails);
+		console.log('🚀 ~ file: solution.ts:232 ~ runPartTwo ~ print: \n' + print);
+		console.log('FIRST PARSE END------------------------------------------------------------');
+	}
+
+	let enclousedTilesCounter = 0;
+	for (let i = 0; i < mazeMap.size; i++) {
+		const row = mazeMap.get(i)!;
+		for (let j = 0; j < row.length; j++) {
+			if (row[j] === '1' || row[j] === '.') enclousedTilesCounter++;
+		}
+	}
+	return enclousedTilesCounter;
+};
+const runRealInputPartTwo = () => {
+	const input = readInputFile('day10', 'input.txt');
+	if (!input) throw new Error('No input data');
+	return runPartTwo(input);
+};
+//console.log('Test Input Part Two _ 0: (Should be 4) ' + runPartTwo(testStringPartTwo_0));
+console.log('Test Input Part Two _1: (Should be 8) ' + runPartTwo(testStringPartTwo_1));
+//console.log('Real Input Part Two: ' + runRealInputPartTwo());
