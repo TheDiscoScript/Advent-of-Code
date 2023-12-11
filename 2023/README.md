@@ -10,3 +10,5 @@
 -   [DAY 6](day6/solution.ts)
 -   [DAY 7](day7/solution.ts)
 -   [DAY 8](day8/solution.ts)
+-   [DAY 9](day9/solution.ts)
+-   [DAY 10](day10/solution.ts) part two ❌
