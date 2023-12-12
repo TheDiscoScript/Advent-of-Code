@@ -22,7 +22,7 @@ In the giant field just outside, the springs are arranged into rows.
 //????.#...#... 4,1,1
 //????.######..#####. 1,6,5
 //?###???????? 3,2,1`;
-const LOG = true;
+const LOG = false;
 const LOG_2 = false;
 const testString = `???.### 1,1,3
 .??..??...?##. 1,1,3
@@ -33,13 +33,10 @@ const testString = `???.### 1,1,3
 
 // i will try to do this recursevely
 // this is similar to tree structure - we are branching out with each recursive checking
+let cache = new Map<string, number>();
 
 function countF(config: string, numbers: number[], pathId = '') {
 	if (LOG) console.log(`Path ID: ${pathId} -- Config: ${config} -- Numbers: ${numbers}`);
-
-	if (LOG_2) console.log('🚀 ~ file: solution.ts:65 ~ run ~ config:', config);
-	if (LOG_2) console.log('🚀 ~ file: solution.ts:67 ~ run ~ numbers:', numbers);
-	if (LOG_2) console.log('🚀 ~ file: solution.ts:67 ~ run ~ config[0]:', config[0]);
 
 	//THIS IS REAL COUNTER INCREMENTATION
 	if (config === '') {
@@ -55,6 +52,11 @@ function countF(config: string, numbers: number[], pathId = '') {
 		// numbers is empty and we are checking if there are any configs left to use
 		// if config is not empty, then we have a bad config because we are expecting valid numbers
 		return config.includes('#') ? 0 : 1;
+	}
+
+	const cacheKey = `${config}-${numbers.join(',')}`;
+	if (cache.has(cacheKey)) {
+		return cache.get(cacheKey)!;
 	}
 
 	let counter = 0;
@@ -80,24 +82,39 @@ function countF(config: string, numbers: number[], pathId = '') {
 		}
 	}
 
+	cache.set(cacheKey, counter);
 	return counter;
 }
-const run = (input: string) => {
+const run = (input: string, partTwo?: boolean) => {
 	let total = 0;
-	let cache = new Map<string, number>();
 
 	const rows = getRows(input);
+	let i = 0;
 	for (const row of rows) {
-		if (LOG) console.log(row);
+		console.log('-----------NEW ROW NUMBER : ' + i++);
+		console.log(row);
+
 		let [config, numStr] = row.split(' ');
 		const nums = numStr.split(',').map((n) => parseInt(n));
-		total += countF(config, nums);
+		if (partTwo) {
+			//config join with "?" and repeat 5 times
+			//nums repeat 5 times
+			config = Array(5).fill(config).join('?');
+			const numsRepeated = Array(5).fill(nums).flat();
+			total += countF(config, numsRepeated);
+		} else {
+			total += countF(config, nums);
+		}
 		console.log('🚀 ~ file: solution.ts:82 ~ run ~ total:', total);
 	}
 
 	return total;
 };
 
-console.log('Test Input: ' + run(testString));
+//console.log('Test Input: ' + run(testString, true));
 const realInput = readInputFile('day12', 'input.txt')!;
-console.log('Real Input: ' + run(realInput));
+console.time('Real Input');
+const dStart = new Date();
+console.log('Real Input: ' + run(realInput, true));
+console.timeEnd('Real Input');
+console.log('Time: ' + (new Date().getTime() - dStart.getTime()) / 1000 + 's');
