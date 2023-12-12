@@ -84,6 +84,7 @@ function countF(config: string, numbers: number[], pathId = '') {
 }
 const run = (input: string) => {
 	let total = 0;
+	let cache = new Map<string, number>();
 
 	const rows = getRows(input);
 	for (const row of rows) {
